@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Account – FaithFlow AI{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-lg">
+
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900 mb-1">My account</h1>
+    <p class="text-sm text-slate-600">
+      View your profile, plan, and usage details.
+    </p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    <h2 class="text-sm font-semibold text-slate-800 mb-2">Profile</h2>
+    <p class="text-sm text-slate-700">
+      <span class="font-semibold">Name:</span> {{ user.name }}
+    </p>
+    <p class="text-sm text-slate-700">
+      <span class="font-semibold">Email:</span> {{ user.email }}
+    </p>
+    <p class="text-xs text-slate-500 mt-2">
+      Joined on {{ user.created_at.strftime("%Y-%m-%d") }}
+    </p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    <h2 class="text-sm font-semibold text-slate-800 mb-2">Plan & usage</h2>
+
+    <p class="text-sm text-slate-700 mb-1">
+      <span class="font-semibold">Current plan:</span> {{ user.plan|capitalize }}
+    </p>
+
+    {% if user.plan == "free" %}
+      <p class="text-sm text-slate-600">
+        You have used <span class="font-semibold">{{ user.monthly_generations or 0 }}</span>
+        of <span class="font-semibold">{{ free_limit }}</span> free generations this month.
+      </p>
+      <p class="text-xs text-slate-500 mt-2 mb-3">
+        Upgrade to unlock more devotionals and scripts each month.
+      </p>
+    <a href="{{ url_for('upgrade') }}"
+         class="inline-flex items-center bg-emerald-500 hover:bg-emerald-400 text-slate-900 text-sm font-semibold px-4 py-2 rounded-md">
+        Upgrade to Creator plan
+    </a>
+
+    {% else %}
+      <p class="text-sm text-emerald-700">
+        Unlimited generations enabled on your Creator plan.
+      </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

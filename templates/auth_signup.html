@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Sign up – FaithFlow AI{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center mt-8">
+  <div class="bg-white rounded-xl shadow-md border border-slate-200 p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-slate-900 mb-4">Create your FaithFlow account</h1>
+    <p class="text-sm text-slate-600 mb-6">
+      Generate kids devotionals and Bible-based video scripts in minutes.
+    </p>
+
+    <form method="POST" action="{{ url_for('signup') }}" class="space-y-4">
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="name">Name</label>
+        <input id="name" name="name" type="text" required
+               class="w-full rounded-md px-3 py-2 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="email">Email</label>
+        <input id="email" name="email" type="email" required
+               class="w-full rounded-md px-3 py-2 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="password">Password</label>
+        <input id="password" name="password" type="password" required
+               class="w-full rounded-md px-3 py-2 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <button type="submit"
+              class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold py-2 rounded-md">
+        Sign up
+      </button>
+    </form>
+
+    <p class="mt-4 text-xs text-slate-500">
+      Already have an account?
+      <a href="{{ url_for('login') }}" class="text-emerald-600 hover:text-emerald-500 underline">
+        Log in
+      </a>
+    </p>
+  </div>
+</div>
+{% endblock %}

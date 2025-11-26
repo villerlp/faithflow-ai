@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Kids Devotionals – FaithFlow AI{% endblock %}
+
+{% block content %}
+<div class="grid md:grid-cols-2 gap-6">
+  <!-- Left: Form -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <h1 class="text-xl font-bold text-slate-900 mb-2">Kids Devotional Builder</h1>
+    <p class="text-sm text-slate-600 mb-4">
+      Generate a multi-day devotional plan with verses, prayers, and activity ideas.
+    </p>
+
+    <form method="POST" action="{{ url_for('devotional') }}" class="space-y-4">
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="theme">Theme</label>
+        <input id="theme" name="theme" type="text" required
+               placeholder="Example: When I feel worried"
+               class="w-full rounded-md px-3 py-2 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="age_range">Age range</label>
+        <select id="age_range" name="age_range" required
+                class="w-full rounded-md px-3 py-2 border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="">Select...</option>
+          <option value="Ages 4–6">Ages 4–6</option>
+          <option value="Ages 7–9">Ages 7–9</option>
+          <option value="Ages 10–12">Ages 10–12</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="num_days">Number of days</label>
+        <select id="num_days" name="num_days" required
+                class="w-full rounded-md px-3 py-2 border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="">Select...</option>
+          <option value="3 days">3 days</option>
+          <option value="5 days">5 days</option>
+          <option value="7 days">7 days</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="tone">Tone</label>
+        <select id="tone" name="tone" required
+                class="w-full rounded-md px-3 py-2 border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="">Select...</option>
+          <option value="Gentle and comforting">Gentle and comforting</option>
+          <option value="Fun and energetic">Fun and energetic</option>
+          <option value="Warm and encouraging">Warm and encouraging</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="translation">Bible translation</label>
+        <select id="translation" name="translation"
+                class="w-full rounded-md px-3 py-2 border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="NIV">NIV</option>
+          <option value="ESV">ESV</option>
+          <option value="NKJV">NKJV</option>
+          <option value="NLT">NLT</option>
+        </select>
+      </div>
+
+      <button type="submit"
+              class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold py-2 rounded-md">
+        Generate devotional
+      </button>
+    </form>
+  </div>
+
+  <!-- Right: Output -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 max-h-[80vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-sm font-semibold text-slate-900">Generated Devotional Plan</h2>
+      {% if output %}
+        <button id="copy-devotional-btn"
+                class="text-xs bg-slate-900 text-white px-3 py-1 rounded-md hover:bg-slate-700">
+          Copy all
+        </button>
+      {% endif %}
+    </div>
+
+    {% if not output %}
+      <p class="text-xs text-slate-500">
+        No devotional generated yet. Fill out the form and click
+        <span class="font-semibold">Generate devotional</span> to get started.
+      </p>
+    {% else %}
+      <div id="devotional-output" class="space-y-4 text-sm">
+        {% for day in output %}
+          <div class="border border-slate-200 rounded-md p-3">
+            <h3 class="font-semibold mb-1 text-slate-900">
+              Day {{ day.day }} – {{ day.title }}
+            </h3>
+            <p class="text-xs text-slate-500 mb-1">
+              Key verse: {{ day.verse }}
+            </p>
+            {% if day.verse_text %}
+              <p class="mb-2 italic text-xs text-slate-600">
+                “{{ day.verse_text }}”
+              </p>
+            {% endif %}
+
+            <h4 class="font-semibold text-xs mb-1 text-slate-800">Devotional</h4>
+            <p class="mb-2">{{ day.devotional }}</p>
+
+            <h4 class="font-semibold text-xs mb-1 text-slate-800">Reflection question</h4>
+            <p class="mb-2">{{ day.question }}</p>
+
+            <h4 class="font-semibold text-xs mb-1 text-slate-800">Prayer</h4>
+            <p class="mb-2">{{ day.prayer }}</p>
+
+            <h4 class="font-semibold text-xs mb-1 text-slate-800">Activity idea</h4>
+            <p class="mb-1">{{ day.activity }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

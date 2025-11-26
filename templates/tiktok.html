@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}TikTok Bible Scripts – FaithFlow AI{% endblock %}
+
+{% block content %}
+<div class="grid md:grid-cols-2 gap-6">
+  <!-- Left: Form -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <h1 class="text-xl font-bold text-slate-900 mb-2">TikTok Bible Script Builder</h1>
+    <p class="text-sm text-slate-600 mb-4">
+      Create short, emotional, Bible-based scripts ready for TikTok and Reels.
+    </p>
+
+    <form method="POST" action="{{ url_for('tiktok') }}" class="space-y-4">
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="theme">Theme</label>
+        <input id="theme" name="theme" type="text" required
+               placeholder="Example: When prayers feel unanswered"
+               class="w-full rounded-md px-3 py-2 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="audience">Audience</label>
+        <input id="audience" name="audience" type="text" required
+               placeholder="Young adults struggling with anxiety"
+               class="w-full rounded-md px-3 py-2 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="length">Video length</label>
+        <select id="length" name="length" required
+                class="w-full rounded-md px-3 py-2 border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="">Select...</option>
+          <option value="30 seconds">About 30 seconds</option>
+          <option value="45 seconds">About 45 seconds</option>
+          <option value="60 seconds">About 60 seconds</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="tone">Tone</label>
+        <select id="tone" name="tone" required
+                class="w-full rounded-md px-3 py-2 border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="">Select...</option>
+          <option value="Gentle and reassuring">Gentle and reassuring</option>
+          <option value="Bold and awakening">Bold and awakening</option>
+          <option value="Honest and vulnerable">Honest and vulnerable</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1 text-slate-700" for="translation">Bible translation</label>
+        <select id="translation" name="translation"
+                class="w-full rounded-md px-3 py-2 border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="NIV">NIV</option>
+          <option value="ESV">ESV</option>
+          <option value="NKJV">NKJV</option>
+          <option value="NLT">NLT</option>
+        </select>
+      </div>
+
+      <button type="submit"
+              class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold py-2 rounded-md">
+        Generate script
+      </button>
+    </form>
+  </div>
+
+  <!-- Right: Output -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 max-h-[80vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-sm font-semibold text-slate-900">Generated Script</h2>
+      {% if output %}
+        <div class="flex gap-2">
+          <button id="copy-tiktok-script-btn"
+                  class="text-xs bg-slate-900 text-white px-3 py-1 rounded-md hover:bg-slate-700">
+            Copy script
+          </button>
+          <button id="copy-tiktok-caption-btn"
+                  class="text-xs bg-slate-200 text-slate-900 px-3 py-1 rounded-md hover:bg-slate-300">
+            Copy caption
+          </button>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if not output %}
+      <p class="text-xs text-slate-500">
+        No script generated yet. Fill out the form and click
+        <span class="font-semibold">Generate script</span> to get started.
+      </p>
+    {% else %}
+      <!-- Script text to copy -->
+      <div id="tiktok-script-output" class="space-y-3 text-sm">
+        <div>
+          <h3 class="text-xs font-semibold text-slate-800 mb-1">Hook / Title</h3>
+          <p>{{ output.hook }}</p>
+        </div>
+
+        <div>
+          <h3 class="text-xs font-semibold text-slate-800 mb-1">Spoken script</h3>
+          <ul class="list-disc list-inside space-y-1">
+            {% for line in output.script_lines %}
+              <li>{{ line }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        {% if output.verses %}
+          <div>
+            <h3 class="text-xs font-semibold text-slate-800 mb-1">Bible verses</h3>
+            {% for v in output.verses %}
+              <p class="font-semibold text-xs text-slate-900">{{ v.reference }}</p>
+              <p class="italic text-xs text-slate-600 mb-1">“{{ v.text }}”</p>
+              <p class="text-sm mb-2">{{ v.note }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if output.cta %}
+          <div>
+            <h3 class="text-xs font-semibold text-slate-800 mb-1">Call to action</h3>
+            <p>{{ output.cta }}</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Caption to copy separately -->
+      <div class="mt-4">
+        <h3 class="text-xs font-semibold text-slate-800 mb-1">Caption & hashtags</h3>
+        <p id="tiktok-caption-output"
+           class="text-xs text-slate-700 whitespace-pre-line">
+          {{ output.caption }}
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

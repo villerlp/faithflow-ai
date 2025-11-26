@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}History – FaithFlow AI{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900 mb-1">Generation history</h1>
+    <p class="text-sm text-slate-600">
+      View your recent devotional and TikTok script generations.
+    </p>
+  </div>
+
+  {% if not gens %}
+    <p class="text-sm text-slate-500">
+      You haven’t generated anything yet. Try creating a devotional or script first.
+    </p>
+  {% else %}
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="text-left px-4 py-2 text-xs font-semibold text-slate-600">Type</th>
+            <th class="text-left px-4 py-2 text-xs font-semibold text-slate-600">Theme</th>
+            <th class="text-left px-4 py-2 text-xs font-semibold text-slate-600">Created</th>
+            <th class="text-left px-4 py-2 text-xs font-semibold text-slate-600">Preview</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for gen in gens %}
+            <tr class="border-t border-slate-100 hover:bg-slate-50">
+              <td class="px-4 py-2">
+                {% if gen.gen_type == "kids_devotional" %}
+                  <span class="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                    Devotional
+                  </span>
+                {% elif gen.gen_type == "tiktok_script" %}
+                  <span class="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                    TikTok Script
+                  </span>
+                {% else %}
+                  {{ gen.gen_type }}
+                {% endif %}
+              </td>
+              <td class="px-4 py-2 text-sm text-slate-800">
+                {{ gen.theme }}
+              </td>
+              <td class="px-4 py-2 text-xs text-slate-500 whitespace-nowrap">
+                {{ gen.created_at.strftime("%Y-%m-%d %H:%M") }}
+              </td>
+              <td class="px-4 py-2 text-xs text-slate-500">
+                {{ gen.output_data[:140] }}{% if gen.output_data|length > 140 %}...{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

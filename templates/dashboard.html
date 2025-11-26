@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – FaithFlow AI{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <div>
+    <h1 class="text-3xl font-bold text-slate-900">Welcome, {{ user.name }}</h1>
+    <p class="text-sm text-slate-600 mt-1">
+      Build faith-based content faster: devotionals for kids and scripts for TikTok/Reels.
+    </p>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6">
+    <a href="{{ url_for('devotional') }}"
+       class="block bg-white rounded-xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition">
+      <h2 class="text-xl font-semibold text-slate-900 mb-2">
+        Kids Devotionals
+      </h2>
+      <p class="text-sm text-slate-600 mb-3">
+        Generate multi-day devotional plans for children with verses, prayers, and activities.
+      </p>
+      <span class="inline-flex items-center text-sm text-emerald-600">
+        Open devotional builder →
+      </span>
+    </a>
+
+    <a href="{{ url_for('tiktok') }}"
+       class="block bg-white rounded-xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition">
+      <h2 class="text-xl font-semibold text-slate-900 mb-2">
+        TikTok Bible Scripts
+      </h2>
+      <p class="text-sm text-slate-600 mb-3">
+        Create short, powerful, Bible-based scripts ready for TikTok and Reels.
+      </p>
+      <span class="inline-flex items-center text-sm text-emerald-600">
+        Open script builder →
+      </span>
+    </a>
+  </div>
+
+  <div class="flex items-center justify-between bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    <div>
+      <p class="text-sm text-slate-600">
+        Current plan: <span class="font-semibold text-slate-900">{{ user.plan|capitalize }}</span>
+      </p>
+      {% if user.plan == "free" %}
+        <p class="text-xs text-slate-500 mt-1">
+          You have used {{ user.monthly_generations or 0 }} of {{ 5 }} free generations this month.
+        </p>
+      {% else %}
+        <p class="text-xs text-emerald-600 mt-1">
+          Unlimited generations enabled.
+        </p>
+      {% endif %}
+    </div>
+    <a href="{{ url_for('account') }}"
+       class="text-sm font-medium text-emerald-600 hover:text-emerald-500">
+      Manage account →
+    </a>
+  </div>
+</div>
+{% endblock %}
