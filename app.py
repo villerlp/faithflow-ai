@@ -46,13 +46,25 @@ client = OpenAI()
 # -----------------------------
 # Database setup (SQLite)
 # -----------------------------
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DB_PATH = os.path.join(BASE_DIR, "faithflow.db")
-engine = create_engine(f"sqlite:///{DB_PATH}", echo=False, future=True)
+# -----------------------------
+# Database setup (PostgreSQL or SQLite fallback)
+# -----------------------------
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    # Render PostgreSQL URL fix: SQLAlchemy requires "postgresql://" NOT "postgres://"
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+    engine = create_engine(DATABASE_URL, echo=False, future=True)
+else:
+    # Local fallback (runs only on your PC, not Render)
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    DB_PATH = os.path.join(BASE_DIR, "faithflow.db")
+    engine = create_engine(f"sqlite:///{DB_PATH}", echo=False, future=True)
 
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-
 
 class User(Base):
     __tablename__ = "users"
