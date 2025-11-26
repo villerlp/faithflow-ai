@@ -692,6 +692,17 @@ def history():
     )
     return render_template("history.html", user=user, gens=gens)
 
+@app.route("/debug-users")
+def debug_users():
+    db = next(get_db())
+    users = db.query(User).order_by(User.id.asc()).all()
+    rows = []
+    for u in users:
+        rows.append(f"{u.id} • {u.email} • plan={u.plan} • gens={u.monthly_generations}")
+    if not rows:
+        return "No users found in DB."
+    return "<br>".join(rows)
+
 
 @app.route("/account")
 @login_required
