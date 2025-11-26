@@ -1,109 +1,59 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>{% block title %}FaithFlow AI{% endblock %}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <!-- Tailwind CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-
-  <body class="bg-slate-100 text-slate-900">
-    <div class="min-h-screen flex flex-col">
-
-      <!-- Top nav -->
-      <nav class="bg-white text-slate-900 border-b border-slate-200 shadow-sm">
-        <div class="max-w-5xl mx-auto flex items-center justify-between px-4 py-3">
-          <a href="{{ url_for('dashboard') if session.get('user_id') else url_for('login') }}"
-             class="flex items-center gap-2">
-            <span class="font-bold text-lg">FaithFlow AI</span>
-            <span class="text-xs bg-emerald-500 text-slate-900 px-2 py-0.5 rounded-full">MVP</span>
+<head>
+  <meta charset="utf-8" />
+  <title>{% block title %}FaithFlow AI{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-900">
+  <nav class="bg-slate-900 text-white">
+    <div class="max-w-5xl mx-auto flex items-center justify-between px-4 py-3">
+      <a href="{{ url_for('dashboard') if session.get('user_id') else url_for('login') }}" class="flex items-center gap-2">
+        <span class="font-bold text-lg">FaithFlow AI</span>
+        <span class="text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full">MVP</span>
+      </a>
+      <div class="flex items-center gap-4 text-sm">
+        {% if session.get('user_id') %}
+          <a href="{{ url_for('dashboard') }}" class="hover:text-emerald-300">Dashboard</a>
+          <a href="{{ url_for('devotional') }}" class="hover:text-emerald-300">Kids Devotionals</a>
+          <a href="{{ url_for('tiktok') }}" class="hover:text-emerald-300">TikTok Scripts</a>
+          <a href="{{ url_for('history') }}" class="hover:text-emerald-300">History</a>
+          <a href="{{ url_for('logout') }}" class="font-semibold hover:text-red-300">Log out</a>
+        {% else %}
+          <a href="{{ url_for('login') }}" class="hover:text-emerald-300">Log in</a>
+          <a href="{{ url_for('signup') }}"
+             class="bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-3 py-1 rounded-md font-semibold">
+            Sign up
           </a>
-
-          <div class="flex items-center gap-4 text-sm">
-            {% if session.get('user_id') %}
-              <a href="{{ url_for('dashboard') }}" class="hover:text-emerald-600">Dashboard</a>
-              <a href="{{ url_for('devotional') }}" class="hover:text-emerald-600">Devotionals</a>
-              <a href="{{ url_for('tiktok') }}" class="hover:text-emerald-600">TikTok Scripts</a>
-              <a href="{{ url_for('history') }}" class="hover:text-emerald-600">History</a>
-              <a href="{{ url_for('account') }}" class="hover:text-emerald-600">Account</a>
-              <a href="{{ url_for('logout') }}" class="font-semibold hover:text-red-500">Log out</a>
-            {% else %}
-              <a href="{{ url_for('login') }}" class="hover:text-emerald-600">Log in</a>
-              <a href="{{ url_for('signup') }}"
-                 class="bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-3 py-1 rounded-md font-semibold">
-                Sign up
-              </a>
-            {% endif %}
-          </div>
-        </div>
-      </nav>
-
-      <!-- Main content -->
-      <main class="flex-1">
-        <div class="max-w-5xl mx-auto px-4 py-6">
-          <!-- Flash messages -->
-          {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-              <div class="space-y-2 mb-4">
-                {% for category, msg in messages %}
-                  {% set color = 'bg-blue-50 text-blue-900 border-blue-200' %}
-                  {% if category == 'success' %}
-                    {% set color = 'bg-emerald-50 text-emerald-900 border-emerald-200' %}
-                  {% elif category == 'danger' %}
-                    {% set color = 'bg-red-50 text-red-900 border-red-200' %}
-                  {% elif category == 'warning' %}
-                    {% set color = 'bg-amber-50 text-amber-900 border-amber-200' %}
-                  {% endif %}
-                  <div class="border {{ color }} px-3 py-2 rounded-md text-sm">
-                    {{ msg }}
-                  </div>
-                {% endfor %}
-              </div>
-            {% endif %}
-          {% endwith %}
-
-          {% block content %}{% endblock %}
-        </div>
-      </main>
-
+        {% endif %}
+      </div>
     </div>
+  </nav>
 
-    <!-- Copy-to-clipboard helper -->
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        function copyElementTextById(id, label) {
-          const el = document.getElementById(id);
-          if (!el) {
-            alert("Nothing to copy yet.");
-            return;
-          }
-          const text = el.innerText.trim();
-          if (!text) {
-            alert("Nothing to copy yet.");
-            return;
-          }
-          navigator.clipboard.writeText(text)
-            .then(() => alert(label + " copied to clipboard."))
-            .catch(() => alert("Could not copy to clipboard. Copy manually."));
-        }
+  <main class="max-w-5xl mx-auto px-4 py-6">
+    {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+        <div class="space-y-2 mb-4">
+          {% for category, msg in messages %}
+            {% set color = 'bg-blue-100 text-blue-900 border-blue-300' %}
+            {% if category == 'success' %}
+              {% set color = 'bg-emerald-100 text-emerald-900 border-emerald-300' %}
+            {% elif category == 'danger' %}
+              {% set color = 'bg-red-100 text-red-900 border-red-300' %}
+            {% elif category == 'warning' %}
+              {% set color = 'bg-amber-100 text-amber-900 border-amber-300' %}
+            {% endif %}
+            <div class="border {{ color }} px-3 py-2 rounded-md text-sm">
+              {{ msg }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
-        const devoBtn = document.getElementById("copy-devotional-btn");
-        if (devoBtn) devoBtn.addEventListener("click", () =>
-          copyElementTextById("devotional-output", "Devotional plan")
-        );
-
-        const tiktokScriptBtn = document.getElementById("copy-tiktok-script-btn");
-        if (tiktokScriptBtn) tiktokScriptBtn.addEventListener("click", () =>
-          copyElementTextById("tiktok-script-output", "TikTok script")
-        );
-
-        const tiktokCaptionBtn = document.getElementById("copy-tiktok-caption-btn");
-        if (tiktokCaptionBtn) tiktokCaptionBtn.addEventListener("click", () =>
-          copyElementTextById("tiktok-caption-output", "Caption")
-        );
-      });
-    </script>
-  </body>
+    {% block content %}{% endblock %}
+  </main>
+</body>
 </html>
