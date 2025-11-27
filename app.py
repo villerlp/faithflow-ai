@@ -3,6 +3,9 @@ import stripe
 import json
 from datetime import datetime
 from functools import wraps
+from datetime import datetime, date
+from flask import abort  # if not already imported
+
 
 from flask import (
     Flask,
@@ -129,6 +132,15 @@ def current_user():
 
     return user
 
+def current_month_range():
+    """Return the datetime range for the current calendar month."""
+    today = date.today()
+    start = datetime(today.year, today.month, 1)
+    if today.month == 12:
+        end = datetime(today.year + 1, 1, 1)
+    else:
+        end = datetime(today.year, today.month + 1, 1)
+    return start, end
 
 
 def login_required(view_func):
@@ -142,11 +154,28 @@ def login_required(view_func):
     return wrapper
 
 
-def can_generate(user: User) -> bool:
-    """Return True if user is allowed to generate more content."""
+def can_generate(user: User, db) -> bool:
+    """
+    Return True if user is allowed to generate more content.
+    Free plan: limit per calendar month, based on Generation rows this month.
+    Creator plan: unlimited.
+    """
     if user.plan == "creator":
         return True
-    return (user.monthly_generations or 0) < FREE_PLAN_LIMIT
+
+    start, end = current_month_range()
+    used = (
+        db.query(Generation)
+        .filter(
+            Generation.user_id == user.id,
+            Generation.created_at >= start,
+            Generation.created_at < end,
+        )
+        .count()
+    )
+
+    return used < FREE_PLAN_LIMIT
+
 
 
 # -----------------------------
@@ -547,8 +576,8 @@ def devotional():
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        # Free plan limit check
-        if not can_generate(user):
+        # Free plan limit check using monthly Generation count
+        if not can_generate(user, db):
             flash("You’ve reached your monthly free limit. Upgrade to generate more content.", "danger")
             return redirect(url_for("account"))
 
@@ -595,10 +624,8 @@ def devotional():
                 translation or "NIV",
             )
 
-        # ✅ Increment usage on the SAME user object / SAME db session
-        if user.plan == "free":
-            user.monthly_generations = (user.monthly_generations or 0) + 1
-
+        # We no longer manually increment monthly_generations.
+        # The Generation row itself is what counts.
         gen = Generation(
             user_id=user.id,
             gen_type="kids_devotional",
@@ -619,6 +646,7 @@ def devotional():
 
     return render_template("devotional.html", user=user, output=output)
 
+
 @app.route("/tiktok", methods=["GET", "POST"])
 @login_required
 def tiktok():
@@ -635,8 +663,8 @@ def tiktok():
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        # Free plan limit check
-        if not can_generate(user):
+        # Free plan limit check using monthly Generation count
+        if not can_generate(user, db):
             flash("You’ve reached your monthly free limit. Upgrade to generate more content.", "danger")
             return redirect(url_for("account"))
 
@@ -683,10 +711,6 @@ def tiktok():
                 translation or "NIV",
             )
 
-        # ✅ Increment usage on the SAME user object / SAME db session
-        if user.plan == "free":
-            user.monthly_generations = (user.monthly_generations or 0) + 1
-
         gen = Generation(
             user_id=user.id,
             gen_type="tiktok_script",
@@ -706,6 +730,7 @@ def tiktok():
         db.commit()
 
     return render_template("tiktok.html", user=user, output=output)
+
 
 @app.route("/history")
 @login_required
@@ -735,8 +760,28 @@ def debug_users():
 @app.route("/account")
 @login_required
 def account():
-    user = current_user()
-    return render_template("account.html", user=user, free_limit=FREE_PLAN_LIMIT)
+    db = next(get_db())
+    user_id = session.get("user_id")
+    user = db.query(User).filter_by(id=user_id).first()
+
+    if not user:
+        session.clear()
+        flash("Please log in again.", "warning")
+        return redirect(url_for("login"))
+
+    start, end = current_month_range()
+    used = (
+        db.query(Generation)
+        .filter(
+            Generation.user_id == user.id,
+            Generation.created_at >= start,
+            Generation.created_at < end,
+        )
+        .count()
+    )
+
+    return render_template("account.html", user=user, free_limit=FREE_PLAN_LIMIT, used=used)
+
 
 @app.route("/upgrade", methods=["GET"])
 @login_required
