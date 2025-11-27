@@ -1,11 +1,8 @@
 import os
-import stripe
 import json
+import stripe
 from datetime import datetime
 from functools import wraps
-from datetime import datetime, date
-from flask import abort  # if not already imported
-
 
 from flask import (
     Flask,
@@ -16,7 +13,9 @@ from flask import (
     session,
     flash,
 )
+
 from werkzeug.security import generate_password_hash, check_password_hash
+
 from sqlalchemy import (
     create_engine,
     Column,
@@ -31,43 +30,47 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from openai import OpenAI
 import openai
 
-# -----------------------------
+
+# =========================================================
 # Flask setup
-# -----------------------------
+# =========================================================
 app = Flask(__name__)
 app.secret_key = os.environ.get("FAITHFLOW_SECRET_KEY", "dev-secret-change-me")
 
-# Stripe configuration (fill these from your Stripe Dashboard)
+
+# =========================================================
+# Stripe configuration
+# =========================================================
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")  # e.g. price_12345 from Stripe
+STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")  # e.g. price_12345
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
 
-# OpenAI client (reads OPENAI_API_KEY from environment)
-client = OpenAI()
+# =========================================================
+# OpenAI client (reads OPENAI_API_KEY from env)
+# =========================================================
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-# -----------------------------
-# Database setup (SQLite)
-# -----------------------------
-# -----------------------------
-# Database setup (PostgreSQL or SQLite fallback)
-# -----------------------------
-DATABASE_URL = os.environ.get("DATABASE_URL")
+
+# =========================================================
+# Database setup: Postgres on Render, SQLite locally
+# =========================================================
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
-    # Render PostgreSQL URL fix: SQLAlchemy requires "postgresql://" NOT "postgres://"
+    # Render Postgres often comes as postgres://, SQLAlchemy likes postgresql://
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
     engine = create_engine(DATABASE_URL, echo=False, future=True)
 else:
-    # Local fallback (runs only on your PC, not Render)
+    # Local dev: SQLite file
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     DB_PATH = os.path.join(BASE_DIR, "faithflow.db")
     engine = create_engine(f"sqlite:///{DB_PATH}", echo=False, future=True)
 
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -101,11 +104,11 @@ class Generation(Base):
 
 Base.metadata.create_all(engine)
 
-# -----------------------------
-# Helpers
-# -----------------------------
 
-FREE_PLAN_LIMIT = 5  # Free users get 5 generations/month (dev+TikTok combined)
+# =========================================================
+# Helpers / Globals
+# =========================================================
+FREE_PLAN_LIMIT = 5  # Free users get 5 generations/month (combined)
 
 
 def get_db():
@@ -124,23 +127,12 @@ def current_user():
     db = next(get_db())
     user = db.query(User).filter_by(id=user_id).first()
 
-    # If the user no longer exists in the DB (e.g., DB recreated),
-    # clear the session so we don't get stuck in a weird state.
+    # If DB got recreated and user is gone, clear session
     if not user:
         session.clear()
         return None
 
     return user
-
-def current_month_range():
-    """Return the datetime range for the current calendar month."""
-    today = date.today()
-    start = datetime(today.year, today.month, 1)
-    if today.month == 12:
-        end = datetime(today.year + 1, 1, 1)
-    else:
-        end = datetime(today.year, today.month + 1, 1)
-    return start, end
 
 
 def login_required(view_func):
@@ -154,33 +146,16 @@ def login_required(view_func):
     return wrapper
 
 
-def can_generate(user: User, db) -> bool:
-    """
-    Return True if user is allowed to generate more content.
-    Free plan: limit per calendar month, based on Generation rows this month.
-    Creator plan: unlimited.
-    """
+def can_generate(user: User) -> bool:
+    """Return True if user is allowed to generate more content."""
     if user.plan == "creator":
         return True
-
-    start, end = current_month_range()
-    used = (
-        db.query(Generation)
-        .filter(
-            Generation.user_id == user.id,
-            Generation.created_at >= start,
-            Generation.created_at < end,
-        )
-        .count()
-    )
-
-    return used < FREE_PLAN_LIMIT
+    return (user.monthly_generations or 0) < FREE_PLAN_LIMIT
 
 
-
-# -----------------------------
-# Stub generators (fallbacks)
-# -----------------------------
+# =========================================================
+# Stub generators (fallbacks if AI fails or quota exceeded)
+# =========================================================
 def generate_kids_devotional_stub(theme, age_range, num_days, tone, translation):
     num_map = {"3 days": 3, "5 days": 5, "7 days": 7}
     days = num_map.get(num_days, 3)
@@ -235,9 +210,9 @@ def generate_tiktok_script_stub(theme, audience, length, tone, translation):
     }
 
 
-# -----------------------------
-# AI generators
-# -----------------------------
+# =========================================================
+# AI generators (full JSON-structured responses)
+# =========================================================
 def generate_kids_devotional_ai(theme, age_range, num_days, tone, translation):
     """
     Use OpenAI to generate a structured kids devotional plan.
@@ -307,7 +282,7 @@ IMPORTANT:
     raw_content = completion.choices[0].message.content or ""
     content = raw_content.strip()
 
-    # Strip ```json ... ``` style fences if the model added them
+    # Strip ```json ... ``` style fences if present
     if content.startswith("```"):
         lines = content.splitlines()
         if lines and lines[0].strip().startswith("```"):
@@ -464,9 +439,9 @@ IMPORTANT:
     return output
 
 
-# -----------------------------
+# =========================================================
 # Auth routes
-# -----------------------------
+# =========================================================
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
@@ -508,9 +483,6 @@ def login():
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
 
-        # Debug: print what we got from the form
-        print("LOGIN attempt:", repr(email))
-
         if not email or not password:
             flash("Please enter both email and password.", "danger")
             return redirect(url_for("login"))
@@ -535,7 +507,6 @@ def login():
     return render_template("auth_login.html")
 
 
-
 @app.route("/logout")
 def logout():
     session.clear()
@@ -543,9 +514,9 @@ def logout():
     return redirect(url_for("login"))
 
 
-# -----------------------------
+# =========================================================
 # Core pages
-# -----------------------------
+# =========================================================
 @app.route("/")
 def index():
     if current_user():
@@ -560,24 +531,18 @@ def dashboard():
     return render_template("dashboard.html", user=user)
 
 
+# =========================================================
+# Devotional generator
+# =========================================================
 @app.route("/devotional", methods=["GET", "POST"])
 @login_required
 def devotional():
+    user = current_user()
     output = None
-    db = next(get_db())
-
-    # Load the user from THIS db session
-    user_id = session.get("user_id")
-    user = db.query(User).filter_by(id=user_id).first()
-
-    if not user:
-        session.clear()
-        flash("Please log in again.", "warning")
-        return redirect(url_for("login"))
 
     if request.method == "POST":
-        # Free plan limit check using monthly Generation count
-        if not can_generate(user, db):
+        # Free plan limit check
+        if not can_generate(user):
             flash("You’ve reached your monthly free limit. Upgrade to generate more content.", "danger")
             return redirect(url_for("account"))
 
@@ -624,8 +589,10 @@ def devotional():
                 translation or "NIV",
             )
 
-        # We no longer manually increment monthly_generations.
-        # The Generation row itself is what counts.
+        db = next(get_db())
+        if user.plan == "free":
+            user.monthly_generations = (user.monthly_generations or 0) + 1
+
         gen = Generation(
             user_id=user.id,
             gen_type="kids_devotional",
@@ -647,24 +614,18 @@ def devotional():
     return render_template("devotional.html", user=user, output=output)
 
 
+# =========================================================
+# TikTok generator
+# =========================================================
 @app.route("/tiktok", methods=["GET", "POST"])
 @login_required
 def tiktok():
+    user = current_user()
     output = None
-    db = next(get_db())
-
-    # Load the user from THIS db session
-    user_id = session.get("user_id")
-    user = db.query(User).filter_by(id=user_id).first()
-
-    if not user:
-        session.clear()
-        flash("Please log in again.", "warning")
-        return redirect(url_for("login"))
 
     if request.method == "POST":
-        # Free plan limit check using monthly Generation count
-        if not can_generate(user, db):
+        # Free plan limit check
+        if not can_generate(user):
             flash("You’ve reached your monthly free limit. Upgrade to generate more content.", "danger")
             return redirect(url_for("account"))
 
@@ -711,6 +672,10 @@ def tiktok():
                 translation or "NIV",
             )
 
+        db = next(get_db())
+        if user.plan == "free":
+            user.monthly_generations = (user.monthly_generations or 0) + 1
+
         gen = Generation(
             user_id=user.id,
             gen_type="tiktok_script",
@@ -732,6 +697,9 @@ def tiktok():
     return render_template("tiktok.html", user=user, output=output)
 
 
+# =========================================================
+# History
+# =========================================================
 @app.route("/history")
 @login_required
 def history():
@@ -745,54 +713,70 @@ def history():
     )
     return render_template("history.html", user=user, gens=gens)
 
-@app.route("/debug-users")
-def debug_users():
-    db = next(get_db())
-    users = db.query(User).order_by(User.id.asc()).all()
-    rows = []
-    for u in users:
-        rows.append(f"{u.id} • {u.email} • plan={u.plan} • gens={u.monthly_generations}")
-    if not rows:
-        return "No users found in DB."
-    return "<br>".join(rows)
 
-
+# =========================================================
+# Account & usage
+# =========================================================
 @app.route("/account")
 @login_required
 def account():
+    user = current_user()
     db = next(get_db())
-    user_id = session.get("user_id")
-    user = db.query(User).filter_by(id=user_id).first()
 
-    if not user:
-        session.clear()
-        flash("Please log in again.", "warning")
-        return redirect(url_for("login"))
-
-    start, end = current_month_range()
+    # Total number of generations recorded for this user
     used = (
         db.query(Generation)
-        .filter(
-            Generation.user_id == user.id,
-            Generation.created_at >= start,
-            Generation.created_at < end,
-        )
+        .filter(Generation.user_id == user.id)
         .count()
     )
 
-    return render_template("account.html", user=user, free_limit=FREE_PLAN_LIMIT, used=used)
+    return render_template(
+        "account.html",
+        user=user,
+        free_limit=FREE_PLAN_LIMIT,
+        used=used,
+    )
 
 
+@app.route("/admin/reset-my-usage", methods=["POST"])
+@login_required
+def admin_reset_my_usage():
+    user = current_user()
+
+    # Only allow YOU to use this admin shortcut
+    if user.email.lower() != "villerlp@hotmail.com":
+        flash("You are not authorized to perform this action.", "danger")
+        return redirect(url_for("account"))
+
+    db = next(get_db())
+    db_user = db.query(User).filter_by(id=user.id).first()
+
+    if db_user:
+        db_user.monthly_generations = 0
+        db.commit()
+        flash("Your usage for this month has been reset.", "success")
+    else:
+        flash("User not found in database.", "danger")
+
+    return redirect(url_for("account"))
+
+
+# =========================================================
+# Upgrade page (marketing page for Creator plan)
+# =========================================================
 @app.route("/upgrade", methods=["GET"])
 @login_required
 def upgrade():
     user = current_user()
-    # If already creator, just send to account
     if user.plan == "creator":
         flash("You’re already on the Creator plan.", "info")
         return redirect(url_for("account"))
     return render_template("upgrade.html", user=user)
 
+
+# =========================================================
+# Stripe checkout
+# =========================================================
 @app.route("/create-checkout-session", methods=["POST"])
 @login_required
 def create_checkout_session():
@@ -802,7 +786,7 @@ def create_checkout_session():
         flash("Stripe is not configured yet. Please contact support.", "danger")
         return redirect(url_for("upgrade"))
 
-    # Your app's domain – adjust if you deploy
+    # Your app's domain – adjust if you deploy custom domain
     domain = request.host_url.rstrip("/")
 
     try:
@@ -829,13 +813,29 @@ def create_checkout_session():
 
     return redirect(checkout_session.url)
 
+
 @app.route("/upgrade-success")
 @login_required
 def upgrade_success():
-    flash("If your payment was successful, your plan will update shortly.", "success")
+    """
+    Called after Stripe checkout success_url.
+    We ALSO have a webhook, but this makes it more robust if webhook isn't set.
+    """
+    user = current_user()
+    db = next(get_db())
+    db_user = db.query(User).filter_by(id=user.id).first()
+    if db_user:
+        db_user.plan = "creator"
+        db_user.monthly_generations = 0
+        db.commit()
+
+    flash("You are now on the Creator plan! Enjoy unlimited generations.", "success")
     return redirect(url_for("account"))
 
 
+# =========================================================
+# Stripe webhook (optional but recommended)
+# =========================================================
 @app.route("/stripe-webhook", methods=["POST"])
 def stripe_webhook():
     payload = request.data
@@ -875,5 +875,9 @@ def stripe_webhook():
     # You can handle subscription events too, if needed
     return "", 200
 
+
+# =========================================================
+# Run local dev
+# =========================================================
 if __name__ == "__main__":
     app.run(debug=True)
