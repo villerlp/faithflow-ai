@@ -534,8 +534,17 @@ def dashboard():
 @app.route("/devotional", methods=["GET", "POST"])
 @login_required
 def devotional():
-    user = current_user()
     output = None
+    db = next(get_db())
+
+    # Load the user from THIS db session
+    user_id = session.get("user_id")
+    user = db.query(User).filter_by(id=user_id).first()
+
+    if not user:
+        session.clear()
+        flash("Please log in again.", "warning")
+        return redirect(url_for("login"))
 
     if request.method == "POST":
         # Free plan limit check
@@ -553,7 +562,7 @@ def devotional():
             flash("Please fill in all required fields.", "danger")
             return redirect(url_for("devotional"))
 
-                # AI with graceful fallback to stub
+        # AI with graceful fallback to stub
         try:
             output = generate_kids_devotional_ai(
                 theme,
@@ -586,18 +595,12 @@ def devotional():
                 translation or "NIV",
             )
 
-        # Use the SAME DB session for both user update and Generation insert
-        db = next(get_db())
-
-        # Re-load the user in this session
-        db_user = db.query(User).filter_by(id=user.id).first()
-
-        # Safely bump free-plan usage
-        if db_user and db_user.plan == "free":
-            db_user.monthly_generations = (db_user.monthly_generations or 0) + 1
+        # ✅ Increment usage on the SAME user object / SAME db session
+        if user.plan == "free":
+            user.monthly_generations = (user.monthly_generations or 0) + 1
 
         gen = Generation(
-            user_id=db_user.id if db_user else user.id,
+            user_id=user.id,
             gen_type="kids_devotional",
             theme=theme,
             input_data=json.dumps(
@@ -614,15 +617,22 @@ def devotional():
         db.add(gen)
         db.commit()
 
-
     return render_template("devotional.html", user=user, output=output)
-
 
 @app.route("/tiktok", methods=["GET", "POST"])
 @login_required
 def tiktok():
-    user = current_user()
     output = None
+    db = next(get_db())
+
+    # Load the user from THIS db session
+    user_id = session.get("user_id")
+    user = db.query(User).filter_by(id=user_id).first()
+
+    if not user:
+        session.clear()
+        flash("Please log in again.", "warning")
+        return redirect(url_for("login"))
 
     if request.method == "POST":
         # Free plan limit check
@@ -640,7 +650,7 @@ def tiktok():
             flash("Please fill in all required fields.", "danger")
             return redirect(url_for("tiktok"))
 
-                # AI with graceful fallback
+        # AI with graceful fallback
         try:
             output = generate_tiktok_script_ai(
                 theme,
@@ -673,14 +683,12 @@ def tiktok():
                 translation or "NIV",
             )
 
-        db = next(get_db())
-        db_user = db.query(User).filter_by(id=user.id).first()
-
-        if db_user and db_user.plan == "free":
-            db_user.monthly_generations = (db_user.monthly_generations or 0) + 1
+        # ✅ Increment usage on the SAME user object / SAME db session
+        if user.plan == "free":
+            user.monthly_generations = (user.monthly_generations or 0) + 1
 
         gen = Generation(
-            user_id=db_user.id if db_user else user.id,
+            user_id=user.id,
             gen_type="tiktok_script",
             theme=theme,
             input_data=json.dumps(
@@ -697,9 +705,7 @@ def tiktok():
         db.add(gen)
         db.commit()
 
-
     return render_template("tiktok.html", user=user, output=output)
-
 
 @app.route("/history")
 @login_required
