@@ -6,56 +6,125 @@
   <div>
     <h1 class="text-2xl font-bold text-slate-900 mb-1">Upgrade to Creator plan</h1>
     <p class="text-sm text-slate-600">
-      Unlock higher limits and build more devotionals and Bible scripts every month.
+      Turn your ideas into finished devotionals and Bible video scripts in minutes — without hiring a writer or spending hours staring at a blank page.
     </p>
   </div>
 
-  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+  <div class="bg-white rounded-xl border border-emerald-100 shadow-sm p-6">
     <div class="flex items-baseline justify-between mb-4">
       <div>
-        <h2 class="text-xl font-semibold text-slate-900">Creator plan</h2>
+        <div class="inline-flex items-center gap-2 mb-1">
+          <h2 class="text-xl font-semibold text-slate-900">Creator plan</h2>
+          <span class="text-[11px] uppercase tracking-wide bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+            Best value
+          </span>
+        </div>
         <p class="text-sm text-slate-600">
-          For creators who publish regularly and need more content.
+          For serious Christian creators who publish regularly and want faith-filled content on tap.
         </p>
       </div>
       <div class="text-right">
-        <p class="text-3xl font-bold text-slate-900">$9<span class="text-lg align-top">/mo</span></p>
-        <p class="text-xs text-slate-500">Billed monthly · cancel anytime</p>
+        <p class="text-3xl font-bold text-slate-900">
+          $9<span class="text-lg align-top">/mo</span>
+        </p>
+        <p class="text-xs text-slate-500">
+          Less than 2 coffees · Cancel anytime
+        </p>
       </div>
     </div>
 
     <ul class="space-y-2 text-sm text-slate-700 mb-4">
-      <li>• Unlimited devotional generations</li>
-      <li>• Unlimited TikTok script generations</li>
+      <li>• <span class="font-semibold">Unlimited</span> kids devotional generations</li>
+      <li>• <span class="font-semibold">Unlimited</span> TikTok & Reels Bible scripts</li>
       <li>• Priority AI generation when usage is high</li>
-      <li>• Early access to new tools & templates</li>
+      <li>• Save all outputs in your account history</li>
+      <li>• Early access to new tools, prompts & templates</li>
+      <li>• Built for pastors, kids’ leaders, and Christian creators</li>
     </ul>
 
-    {% if user.plan == "creator" %}
-      <p class="text-sm text-emerald-700 mb-2">
-        You are already on the Creator plan. Thank you for your support!
-      </p>
-      <a href="{{ url_for('account') }}"
-         class="inline-flex text-sm text-emerald-600 hover:text-emerald-500 underline">
-        Back to account
-      </a>
-    {% else %}
-      <form method="POST" action="{{ url_for('create_checkout_session') }}">
-        <button type="submit"
-                class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold py-2 rounded-md">
-          Upgrade now
-        </button>
-      </form>
-      <p class="mt-2 text-xs text-slate-500">
-        Secure payment powered by Stripe. You’ll be redirected to a hosted checkout page.
-      </p>
-    {% endif %}
+    <div class="border-t border-slate-100 pt-4">
+      {% if user.plan == "creator" %}
+        <p class="text-sm text-emerald-700 mb-2 flex items-center gap-2">
+          <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
+            ✓
+          </span>
+          You are already on the <span class="font-semibold">Creator</span> plan. Thank you for supporting FaithFlow AI!
+        </p>
+        <a href="{{ url_for('account') }}"
+           class="inline-flex text-sm text-emerald-600 hover:text-emerald-500 underline">
+          Back to account
+        </a>
+      {% else %}
+        <!-- Stripe checkout form opens in a NEW TAB -->
+        <form
+          id="stripe-checkout-form"
+          method="POST"
+          action="{{ url_for('create_checkout_session') }}"
+          target="_blank"
+        >
+          <button
+            id="upgrade-btn"
+            type="submit"
+            class="w-full inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold py-2.5 rounded-md text-sm shadow-sm transition disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            <span id="upgrade-btn-spinner" class="hidden">
+              <!-- Simple Tailwind spinner -->
+              <span class="inline-block h-4 w-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></span>
+            </span>
+            <span id="upgrade-btn-text">Upgrade now</span>
+          </button>
+        </form>
+
+        <p class="mt-2 text-xs text-slate-500 flex items-center gap-2">
+          <span class="inline-flex items-center justify-center h-4 w-4 rounded-full border border-slate-300 text-[9px]">
+            i
+          </span>
+          Secure payment powered by Stripe. You’ll be redirected to a hosted checkout page in a new tab.
+        </p>
+
+        <p class="mt-1 text-[11px] text-slate-400">
+          No contracts · Cancel anytime from your Stripe receipt emails · Keep all content you’ve already generated.
+        </p>
+      {% endif %}
+    </div>
   </div>
 
-  <div class="text-xs text-slate-500">
+  <div class="text-xs text-slate-500 space-y-1">
     <p>
-      Note: This is an MVP. Pricing and features may change as FaithFlow grows.
+      FaithFlow AI is in an early MVP stage. Pricing and features may adjust as we grow, but your support helps shape what comes next.
+    </p>
+    <p>
+      Have feedback or feature ideas? Reply to your signup email and they’ll go straight to the creator.
     </p>
   </div>
 </div>
+
+{% if user.plan != "creator" %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("stripe-checkout-form");
+    const btn = document.getElementById("upgrade-btn");
+    const textSpan = document.getElementById("upgrade-btn-text");
+    const spinner = document.getElementById("upgrade-btn-spinner");
+
+    if (!form || !btn) return;
+
+    form.addEventListener("submit", function () {
+      // Disable button to prevent double-click
+      btn.disabled = true;
+
+      // Show spinner + update text
+      if (spinner) {
+        spinner.classList.remove("hidden");
+      }
+      if (textSpan) {
+        textSpan.textContent = "Opening secure checkout…";
+      }
+
+      // Note: Stripe opens in a NEW TAB because of target="_blank".
+      // We leave the button disabled to avoid multiple sessions.
+    });
+  });
+</script>
+{% endif %}
 {% endblock %}
